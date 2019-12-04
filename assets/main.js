@@ -426,53 +426,147 @@
 									history.replaceState(null, null, '#');
 	
 							// Deactivate current section.
-								currentSection = $('section:not(.inactive)');
 	
-								if (currentSection) {
+								// Hide header and/or footer (if necessary).
+									name = (section ? section.id.replace(/-section$/, '') : null);
+									hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
+									hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
 	
-									// Deactivate.
-										currentSection.classList.add('inactive');
+									// Header.
+										if (header && hideHeader) {
 	
-									// Hide.
-										setTimeout(function() {
-											currentSection.style.display = 'none';
-											currentSection.classList.remove('active');
-										}, 250);
+											header.classList.add('hidden');
 	
-								}
+											setTimeout(function() {
+												header.style.display = 'none';
+											}, 250);
+	
+										}
+	
+									// Footer.
+										if (footer && hideFooter) {
+	
+											footer.classList.add('hidden');
+	
+											setTimeout(function() {
+												footer.style.display = 'none';
+											}, 250);
+	
+										}
+	
+								// Deactivate.
+									currentSection = $('#main > .inner > section:not(.inactive)');
+	
+									if (currentSection) {
+	
+										// Get current height.
+											currentSectionHeight = currentSection.offsetHeight;
+	
+										// Deactivate.
+											currentSection.classList.add('inactive');
+	
+										// Hide.
+											setTimeout(function() {
+												currentSection.style.display = 'none';
+												currentSection.classList.remove('active');
+											}, 250);
+	
+									}
 	
 							// Activate target section.
 								setTimeout(function() {
 	
-									// Show.
-										section.style.display = '';
+									// Show header and/or footer (if necessary).
 	
-									// Trigger 'resize' event.
-										trigger('resize');
+										// Header.
+											if (header && !hideHeader) {
 	
-									// Scroll to top.
-										doScroll(null, 'instant');
+												header.style.display = '';
 	
-									// Delay.
-										setTimeout(function() {
-	
-											// Activate.
-												section.classList.remove('inactive');
-												section.classList.add('active');
-	
-											// Delay.
 												setTimeout(function() {
+													header.classList.remove('hidden');
+												}, 0);
 	
-												 	// Scroll to scroll point (if applicable).
-												 		if (scrollPoint)
-															doScroll(scrollPoint, 'instant');
+											}
 	
-													// Unlock.
-														locked = false;
+										// Footer.
+											if (footer && !hideFooter) {
 	
-												}, 500);
+												footer.style.display = '';
 	
-										}, 75);
+												setTimeout(function() {
+													footer.classList.remove('hidden');
+												}, 0);
+	
+											}
+	
+									// Activate.
+	
+										// Show.
+											section.style.display = '';
+	
+										// Trigger 'resize' event.
+											trigger('resize');
+	
+										// Scroll to top.
+											doScroll(null, 'instant');
+	
+										// Get target height.
+											sectionHeight = section.offsetHeight;
+	
+										// Set target heights.
+											if (sectionHeight > currentSectionHeight) {
+	
+												section.style.maxHeight = currentSectionHeight + 'px';
+												section.style.minHeight = '0';
+	
+											}
+											else {
+	
+												section.style.maxHeight = '';
+												section.style.minHeight = currentSectionHeight + 'px';
+	
+											}
+	
+										// Delay.
+											setTimeout(function() {
+	
+												// Activate.
+													section.classList.remove('inactive');
+													section.classList.add('active');
+	
+												// Temporarily restore target heights.
+													section.style.minHeight = sectionHeight + 'px';
+													section.style.maxHeight = sectionHeight + 'px';
+	
+												// Delay.
+													setTimeout(function() {
+	
+														// Turn off transitions.
+															section.style.transition = 'none';
+	
+														// Clear target heights.
+															section.style.minHeight = '';
+															section.style.maxHeight = '';
+	
+													 	// Scroll to scroll point (if applicable).
+													 		if (scrollPoint)
+																doScroll(scrollPoint, 'instant');
+	
+														// Delay.
+															setTimeout(function() {
+	
+																// Turn on transitions.
+																	section.style.transition = '';
+	
+																// Unlock.
+																	locked = false;
+	
+															}, 75);
+	
+													}, 500);
+	
+											}, 75);
 	
 								}, 250);
 	
@@ -885,5 +979,114 @@
 					})();
 	
 			}
+	
+	// Deferred.
+		(function() {
+	
+			var items = $$('.deferred'),
+				f;
+	
+			// Polyfill: NodeList.forEach()
+				if (!('forEach' in NodeList.prototype))
+					NodeList.prototype.forEach = Array.prototype.forEach;
+	
+			// Initialize items.
+				items.forEach(function(p) {
+	
+					var i = p.firstElementChild;
+	
+					// Set parent to placeholder.
+						p.style.backgroundImage = 'url(' + i.src + ')';
+						p.style.backgroundSize = '100% 100%';
+						p.style.backgroundPosition = 'top left';
+						p.style.backgroundRepeat = 'no-repeat';
+	
+					// Hide image.
+						i.style.opacity = 0;
+						i.style.transition = 'opacity 0.375s ease-in-out';
+	
+					// Load event.
+						i.addEventListener('load', function(event) {
+	
+							// Not "done" yet? Bail.
+								if (i.dataset.src !== 'done')
+									return;
+	
+							// Show image.
+								if (Date.now() - i._startLoad < 375) {
+	
+									p.classList.remove('loading');
+									p.style.backgroundImage = 'none';
+									i.style.transition = '';
+									i.style.opacity = 1;
+	
+								}
+								else {
+	
+									p.classList.remove('loading');
+									i.style.opacity = 1;
+	
+									setTimeout(function() {
+										p.style.backgroundImage = 'none';
+									}, 375);
+	
+								}
+	
+						});
+	
+				});
+	
+			// Handler function.
+				f = function() {
+	
+					var	height = document.documentElement.clientHeight,
+						top = (client.os == 'ios' ? document.body.scrollTop : document.documentElement.scrollTop),
+						bottom = top + height;
+	
+					// Step through items.
+						items.forEach(function(p) {
+	
+							var i = p.firstElementChild;
+	
+							// Not visible? Bail.
+								if (i.offsetParent === null)
+									return true;
+	
+							// "Done" already? Bail.
+								if (i.dataset.src === 'done')
+									return true;
+	
+							// Get image position.
+								var	x = i.getBoundingClientRect(),
+									imageTop = top + Math.floor(x.top) - height,
+									imageBottom = top + Math.ceil(x.bottom) + height,
+									src;
+	
+							// Falls within viewable area of viewport?
+								if (imageTop <= bottom && imageBottom >= top) {
+	
+									// Get src, mark as "done".
+										src = i.dataset.src;
+										i.dataset.src = 'done';
+	
+									// Mark parent as loading.
+										p.classList.add('loading');
+	
+									// Swap placeholder for real image src.
+										i._startLoad = Date.now();
+										i.src = src;
+	
+								}
+	
+						});
+	
+				};
+	
+			// Add event listeners.
+				on('load', f);
+				on('resize', f);
+				on('scroll', f);
+	
+		})();
 
 })();
