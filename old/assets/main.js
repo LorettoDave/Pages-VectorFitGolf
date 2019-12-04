@@ -133,9 +133,479 @@
 	
 				setTimeout(function() {
 					$body.className = $body.className.replace(/\bis-playing\b/, 'is-ready');
-				}, 1000);
+				}, 2000);
 			}, 100);
 		});
+	
+	// Sections.
+		(function() {
+	
+			var initialSection, initialScrollPoint, initialId,
+				header, footer, name, hideHeader, hideFooter,
+				h, e, ee, k,
+				locked = false,
+				doNext = function() {
+	
+					var section;
+	
+					section = $('#main > .inner > section.active').nextElementSibling;
+	
+					if (!section || section.tagName != 'SECTION')
+						return;
+	
+					location.href = '#' + section.id.replace(/-section$/, '');
+	
+				},
+				doPrevious = function() {
+	
+					var section;
+	
+					section = $('#main > .inner > section.active').previousElementSibling;
+	
+					if (!section || section.tagName != 'SECTION')
+						return;
+	
+					location.href = '#' + (section.matches(':first-child') ? '' : section.id.replace(/-section$/, ''));
+	
+				},
+				doScroll = function(e, style, duration) {
+	
+					var y, cy, dy,
+						start, easing, f;
+	
+					// Element.
+	
+						// No element? Assume top of page.
+							if (!e)
+								y = 0;
+	
+						// Otherwise ...
+							else
+								switch (e.dataset.scrollBehavior ? e.dataset.scrollBehavior : 'default') {
+	
+									case 'default':
+									default:
+	
+										y = e.offsetTop;
+	
+										break;
+	
+									case 'center':
+	
+										if (e.offsetHeight < window.innerHeight)
+											y = e.offsetTop - ((window.innerHeight - e.offsetHeight) / 2);
+										else
+											y = e.offsetTop;
+	
+										break;
+	
+									case 'previous':
+	
+										if (e.previousElementSibling)
+											y = e.previousElementSibling.offsetTop + e.previousElementSibling.offsetHeight;
+										else
+											y = e.offsetTop;
+	
+										break;
+	
+								}
+	
+					// Style.
+						if (!style)
+							style = 'smooth';
+	
+					// Duration.
+						if (!duration)
+							duration = 750;
+	
+					// Instant? Just scroll.
+						if (style == 'instant') {
+	
+							window.scrollTo(0, y);
+							return;
+	
+						}
+	
+					// Get start, current Y.
+						start = Date.now();
+						cy = window.scrollY;
+						dy = y - cy;
+	
+					// Set easing.
+						switch (style) {
+	
+							case 'linear':
+								easing = function (t) { return t };
+								break;
+	
+							case 'smooth':
+								easing = function (t) { return t<.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1 };
+								break;
+	
+						}
+	
+					// Scroll.
+						f = function() {
+	
+							var t = Date.now() - start;
+	
+							// Hit duration? Scroll to y and finish.
+								if (t >= duration)
+									window.scroll(0, y);
+	
+							// Otherwise ...
+								else {
+	
+									// Scroll.
+										window.scroll(0, cy + (dy * easing(t / duration)));
+	
+									// Repeat.
+										requestAnimationFrame(f);
+	
+								}
+	
+						};
+	
+						f();
+	
+				},
+				sections = {};
+	
+			// Expose doNext, doPrevious.
+				window._next = doNext;
+				window._previous = doPrevious;
+	
+			// Initialize.
+	
+				// Set scroll restoration to manual.
+					if ('scrollRestoration' in history)
+						history.scrollRestoration = 'manual';
+	
+				// Header, footer.
+					header = $('#header');
+					footer = $('#footer');
+	
+				// Show initial section.
+	
+					// Determine target.
+						h = location.hash ? location.hash.substring(1) : null;
+	
+						if (h && !h.match(/^[a-zA-Z]/))
+							h = 'x' + h;
+	
+						// Scroll point.
+							if (e = $('[data-scroll-id="' + h + '"]')) {
+	
+								initialScrollPoint = e;
+								initialSection = initialScrollPoint.parentElement;
+								initialId = initialSection.id;
+	
+							}
+	
+						// Section.
+							else if (e = $('#' + (h ? h : 'home') + '-section')) {
+	
+								initialScrollPoint = null;
+								initialSection = e;
+								initialId = initialSection.id;
+	
+							}
+	
+					// Deactivate all sections (except initial).
+	
+						// Initially hide header and/or footer (if necessary).
+							name = (h ? h : 'home');
+							hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
+							hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
+	
+							// Header.
+								if (header && hideHeader) {
+	
+									header.classList.add('hidden');
+									header.style.display = 'none';
+	
+								}
+	
+							// Footer.
+								if (footer && hideFooter) {
+	
+									footer.classList.add('hidden');
+									footer.style.display = 'none';
+	
+								}
+	
+						// Deactivate.
+							ee = $$('#main > .inner > section:not([id="' + initialId + '"])');
+	
+							for (k = 0; k < ee.length; k++) {
+	
+								ee[k].className = 'inactive';
+								ee[k].style.display = 'none';
+	
+							}
+	
+					// Activate initial section.
+						initialSection.classList.add('active');
+	
+				 	// Scroll to top.
+						doScroll(null, 'instant');
+	
+				// Load event.
+					on('load', function() {
+	
+						// Scroll to initial scroll point (if applicable).
+					 		if (initialScrollPoint)
+								doScroll(initialScrollPoint, 'instant');
+	
+					});
+	
+			// Hashchange event.
+				on('hashchange', function(event) {
+	
+					var section, scrollPoint, id, sectionHeight, currentSection, currentSectionHeight,
+						name, hideHeader, hideFooter,
+						h, e, ee, k;
+	
+					// Lock.
+						if (locked)
+							return false;
+	
+					// Determine target.
+						h = location.hash ? location.hash.substring(1) : null;
+	
+						// Scroll point.
+							if (e = $('[data-scroll-id="' + h + '"]')) {
+	
+								scrollPoint = e;
+								section = scrollPoint.parentElement;
+								id = section.id;
+	
+							}
+	
+						// Section.
+							else if (e = $('#' + (h ? h : 'home') + '-section')) {
+	
+								scrollPoint = null;
+								section = e;
+								id = section.id;
+	
+							}
+	
+						// Bail.
+							else
+								return false;
+	
+					// No section? Bail.
+						if (!section)
+							return false;
+	
+					// Section already active?
+						if (!section.classList.contains('inactive')) {
+	
+						 	// Scroll to scroll point (if applicable).
+						 		if (scrollPoint)
+									doScroll(scrollPoint);
+	
+							// Otherwise, just scroll to top.
+								else
+									doScroll(null);
+	
+							// Bail.
+								return false;
+	
+						}
+	
+					// Otherwise, activate it.
+						else {
+	
+							// Lock.
+								locked = true;
+	
+							// Clear index URL hash.
+								if (location.hash == '#home')
+									history.replaceState(null, null, '#');
+	
+							// Deactivate current section.
+	
+								// Hide header and/or footer (if necessary).
+									name = (section ? section.id.replace(/-section$/, '') : null);
+									hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
+									hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
+	
+									// Header.
+										if (header && hideHeader) {
+	
+											header.classList.add('hidden');
+	
+											setTimeout(function() {
+												header.style.display = 'none';
+											}, 250);
+	
+										}
+	
+									// Footer.
+										if (footer && hideFooter) {
+	
+											footer.classList.add('hidden');
+	
+											setTimeout(function() {
+												footer.style.display = 'none';
+											}, 250);
+	
+										}
+	
+								// Deactivate.
+									currentSection = $('#main > .inner > section:not(.inactive)');
+	
+									if (currentSection) {
+	
+										// Get current height.
+											currentSectionHeight = currentSection.offsetHeight;
+	
+										// Deactivate.
+											currentSection.classList.add('inactive');
+	
+										// Hide.
+											setTimeout(function() {
+												currentSection.style.display = 'none';
+												currentSection.classList.remove('active');
+											}, 250);
+	
+									}
+	
+							// Activate target section.
+								setTimeout(function() {
+	
+									// Show header and/or footer (if necessary).
+	
+										// Header.
+											if (header && !hideHeader) {
+	
+												header.style.display = '';
+	
+												setTimeout(function() {
+													header.classList.remove('hidden');
+												}, 0);
+	
+											}
+	
+										// Footer.
+											if (footer && !hideFooter) {
+	
+												footer.style.display = '';
+	
+												setTimeout(function() {
+													footer.classList.remove('hidden');
+												}, 0);
+	
+											}
+	
+									// Activate.
+	
+										// Show.
+											section.style.display = '';
+	
+										// Trigger 'resize' event.
+											trigger('resize');
+	
+										// Scroll to top.
+											doScroll(null, 'instant');
+	
+										// Get target height.
+											sectionHeight = section.offsetHeight;
+	
+										// Set target heights.
+											if (sectionHeight > currentSectionHeight) {
+	
+												section.style.maxHeight = currentSectionHeight + 'px';
+												section.style.minHeight = '0';
+	
+											}
+											else {
+	
+												section.style.maxHeight = '';
+												section.style.minHeight = currentSectionHeight + 'px';
+	
+											}
+	
+										// Delay.
+											setTimeout(function() {
+	
+												// Activate.
+													section.classList.remove('inactive');
+													section.classList.add('active');
+	
+												// Temporarily restore target heights.
+													section.style.minHeight = sectionHeight + 'px';
+													section.style.maxHeight = sectionHeight + 'px';
+	
+												// Delay.
+													setTimeout(function() {
+	
+														// Turn off transitions.
+															section.style.transition = 'none';
+	
+														// Clear target heights.
+															section.style.minHeight = '';
+															section.style.maxHeight = '';
+	
+													 	// Scroll to scroll point (if applicable).
+													 		if (scrollPoint)
+																doScroll(scrollPoint, 'instant');
+	
+														// Delay.
+															setTimeout(function() {
+	
+																// Turn on transitions.
+																	section.style.transition = '';
+	
+																// Unlock.
+																	locked = false;
+	
+															}, 75);
+	
+													}, 500);
+	
+											}, 75);
+	
+								}, 250);
+	
+						}
+	
+					return false;
+	
+				});
+	
+				// Hack: Allow hashchange to trigger on click even if the target's href matches the current hash.
+					on('click', function(event) {
+	
+						var t = event.target;
+	
+						// Target is an image and its parent is a link? Switch target to parent.
+							if (t.tagName == 'IMG'
+							&&	t.parentElement
+							&&	t.parentElement.tagName == 'A')
+								t = t.parentElement;
+	
+						// Target is an anchor *and* its href is a hash that matches the current hash?
+							if (t.tagName == 'A'
+							&&	t.getAttribute('href').substr(0, 1) == '#'
+							&&	t.hash == window.location.hash) {
+	
+								// Prevent default.
+									event.preventDefault();
+	
+								// Replace state with '#'.
+									history.replaceState(undefined, undefined, '#');
+	
+								// Replace location with target hash.
+									location.replace(t.hash);
+	
+							}
+	
+					});
+	
+		})();
 	
 	// Browser hacks.
 	
@@ -618,433 +1088,5 @@
 				on('scroll', f);
 	
 		})();
-	
-	// Gallery.
-		/**
-		 * Lightbox gallery.
-		 */
-		function lightboxGallery() {
-		
-			var _this = this;
-		
-			/**
-			 * ID.
-			 * @var {string}
-			 */
-			this.id = 'gallery';
-		
-			/**
-			 * Wrapper.
-			 * @var {DOMElement}
-			 */
-			this.$wrapper = $('#' + this.id);
-		
-			/**
-			 * Modal.
-			 * @var {DOMElement}
-			 */
-			this.$modal = null;
-		
-			/**
-			 * Modal image.
-			 * @var {DOMElement}
-			 */
-			this.$modalImage = null;
-		
-			/**
-			 * Modal next.
-			 * @var {DOMElement}
-			 */
-			this.$modalNext = null;
-		
-			/**
-			 * Modal previous.
-			 * @var {DOMElement}
-			 */
-			this.$modalPrevious = null;
-		
-			/**
-			 * Links.
-			 * @var {nodeList}
-			 */
-			this.$links = null;
-		
-			/**
-			 * Lock state.
-			 * @var {bool}
-			 */
-			this.locked = false;
-		
-			/**
-			 * Current index.
-			 * @var {integer}
-			 */
-			this.current = null;
-		
-			/**
-			 * Transition delay (must match CSS).
-			 * @var {integer}
-			 */
-			this.delay = 375;
-		
-			/**
-			 * Navigation state.
-			 * @var {bool}
-			 */
-			this.navigation = null;
-		
-			// Init modal.
-				this.initModal();
-		
-		};
-		
-			/**
-			 * Initialize.
-			 * @param {object} config Config.
-			 */
-			lightboxGallery.prototype.init = function(config) {
-		
-				var _this = this,
-					$links = $$('#' + config.id + ' .thumbnail'),
-					navigation = (config.navigation && $links.length > 1),
-					i;
-		
-				// Initialize links.
-					for (i=0; i < $links.length; i++)
-						(function(index) {
-							$links[index].addEventListener('click', function(event) {
-		
-								event.stopPropagation();
-								event.preventDefault();
-		
-								_this.show(index, {
-									$links: $links,
-									navigation: navigation
-								});
-		
-							});
-						})(i);
-		
-			};
-		
-			/**
-			 * Init modal.
-			 */
-			lightboxGallery.prototype.initModal = function() {
-		
-				var	_this = this,
-					$modal,
-					$modalImage,
-					$modalNext,
-					$modalPrevious;
-		
-				// Build element.
-					$modal = document.createElement('div');
-						$modal.id = this.id + '-modal';
-						$modal.tabIndex = -1;
-						$modal.className = 'gallery-modal';
-						$modal.innerHTML = '<div class="inner"><img src="" /></div><div class="nav previous"></div><div class="nav next"></div><div class="close"></div>';
-						$body.appendChild($modal);
-		
-					// Image.
-						$modalImage = $('#' + this.id + '-modal img');
-							$modalImage.addEventListener('load', function() {
-		
-								// Delay (wait for visible transition, if not switching).
-									setTimeout(function() {
-		
-										// No longer visible? Bail.
-											if (!$modal.classList.contains('visible'))
-												return;
-		
-										// Set loaded.
-											$modal.classList.add('loaded');
-		
-										// Clear switching after delay.
-											setTimeout(function() {
-												$modal.classList.remove('switching');
-											}, _this.delay);
-		
-									}, ($modal.classList.contains('switching') ? 0 : _this.delay));
-		
-							});
-		
-					// Navigation.
-						$modalNext = $('#' + this.id + '-modal .next');
-						$modalPrevious = $('#' + this.id + '-modal .previous');
-		
-				// Methods.
-					$modal.show = function(index) {
-		
-						var item;
-		
-						// Locked? Bail.
-							if (_this.locked)
-								return;
-		
-						// Check index.
-		
-							// Less than zero? Jump to end.
-								if (index < 0)
-									index = _this.$links.length - 1;
-		
-							// Greater than length? Jump to beginning.
-								else if (index >= _this.$links.length)
-									index = 0;
-		
-							// Already there? Bail.
-								if (index == _this.current)
-									return;
-		
-						// Get item.
-							item = _this.$links.item(index);
-		
-							if (!item)
-								return;
-		
-						// Lock.
-							_this.locked = true;
-		
-						// Current?
-							if (_this.current !== null) {
-		
-								// Clear loaded.
-									$modal.classList.remove('loaded');
-		
-								// Set switching.
-									$modal.classList.add('switching');
-		
-								// Delay (wait for switching transition).
-									setTimeout(function() {
-		
-										// Set current, src.
-											_this.current = index;
-											$modalImage.src = item.href;
-		
-										// Delay.
-											setTimeout(function() {
-		
-												// Focus.
-													$modal.focus();
-		
-												// Unlock.
-													_this.locked = false;
-		
-											}, _this.delay);
-		
-									}, _this.delay);
-		
-							}
-		
-						// Otherwise ...
-							else {
-		
-								// Set current, src.
-									_this.current = index;
-									$modalImage.src = item.href;
-		
-								// Set visible.
-									$modal.classList.add('visible');
-		
-								// Delay.
-									setTimeout(function() {
-		
-										// Focus.
-											$modal.focus();
-		
-										// Unlock.
-											_this.locked = false;
-		
-									}, _this.delay);
-		
-							}
-		
-					};
-		
-					$modal.hide = function() {
-		
-						// Locked? Bail.
-							if (_this.locked)
-								return;
-		
-						// Already hidden? Bail.
-							if (!$modal.classList.contains('visible'))
-								return;
-		
-						// Lock.
-							_this.locked = true;
-		
-						// Clear visible, loaded, switching.
-							$modal.classList.remove('visible');
-							$modal.classList.remove('loaded');
-							$modal.classList.remove('switching');
-		
-						// Delay (wait for visible transition).
-							setTimeout(function() {
-		
-								// Clear src.
-									$modalImage.src = '';
-		
-								// Unlock.
-									_this.locked = false;
-		
-								// Focus.
-									$body.focus();
-		
-								// Clear current.
-									_this.current = null;
-		
-							}, _this.delay);
-		
-					};
-		
-					$modal.next = function() {
-						$modal.show(_this.current + 1);
-					};
-		
-					$modal.previous = function() {
-						$modal.show(_this.current - 1);
-					};
-		
-					$modal.first = function() {
-						$modal.show(0);
-					};
-		
-					$modal.last = function() {
-						$modal.show(_this.$links.length - 1);
-					};
-		
-				// Events.
-					$modal.addEventListener('click', function(event) {
-						$modal.hide();
-					});
-		
-		
-					$modal.addEventListener('keydown', function(event) {
-		
-						// Not visible? Bail.
-							if (!$modal.classList.contains('visible'))
-								return;
-		
-						switch (event.keyCode) {
-		
-							// Right arrow, Space.
-								case 39:
-								case 32:
-		
-									if (!_this.navigation)
-										break;
-		
-									event.preventDefault();
-									event.stopPropagation();
-		
-									$modal.next();
-		
-									break;
-		
-							// Left arrow.
-								case 37:
-		
-									if (!_this.navigation)
-										break;
-		
-									event.preventDefault();
-									event.stopPropagation();
-		
-									$modal.previous();
-		
-									break;
-		
-							// Home.
-								case 36:
-		
-									if (!_this.navigation)
-										break;
-		
-									event.preventDefault();
-									event.stopPropagation();
-		
-									$modal.first();
-		
-									break;
-		
-							// End.
-								case 35:
-		
-									if (!_this.navigation)
-										break;
-		
-									event.preventDefault();
-									event.stopPropagation();
-		
-									$modal.last();
-		
-									break;
-		
-							// Escape.
-								case 27:
-		
-									event.preventDefault();
-									event.stopPropagation();
-		
-									$modal.hide();
-		
-									break;
-		
-						}
-		
-					});
-		
-					$modalNext.addEventListener('click', function(event) {
-						$modal.next();
-					});
-		
-					$modalPrevious.addEventListener('click', function(event) {
-						$modal.previous();
-					});
-		
-				// Set.
-					this.$modal = $modal;
-					this.$modalImage = $modalImage;
-					this.$modalNext = $modalNext;
-					this.$modalPrevious = $modalPrevious;
-		
-			};
-		
-			/**
-			 * Show.
-			 * @param {string} href Image href.
-			 */
-			lightboxGallery.prototype.show = function(href, config) {
-		
-				// Update config.
-					this.$links = config.$links;
-					this.navigation = config.navigation;
-		
-					if (this.navigation) {
-		
-						this.$modalNext.style.display = '';
-						this.$modalPrevious.style.display = '';
-		
-					}
-					else {
-		
-						this.$modalNext.style.display = 'none';
-						this.$modalPrevious.style.display = 'none';
-		
-					}
-		
-				// Show modal.
-					this.$modal.show(href);
-		
-			};
-		
-			var _lightboxGallery = new lightboxGallery;
-	
-	// Gallery: gallery01.
-		_lightboxGallery.init({
-			id: 'gallery01',
-			navigation: true
-		});
 
 })();
