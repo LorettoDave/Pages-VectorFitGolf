@@ -461,12 +461,6 @@ h1 .li, h2 .li, h3 .li, p .li {
 	fill: rgba(144,146,99,0.565) !important;
 }
 
-#embed01 .frame iframe {
-	max-width: 100%;
-	width: 20rem;
-	height: 11rem;
-}
-
 .gallery .inner {
 	display: inline-block;
 	max-width: 100%;
