@@ -331,11 +331,11 @@ h1 .li, h2 .li, h3 .li, p .li {
 	margin: 0.75em 0 0 1em;
 }
 
-#text01 br + br {
+#text04 br + br {
 	margin-top: 1.125rem;
 }
 
-#text01 {
+#text04 {
 	color: #545454;
 	font-family: 'Heebo', sans-serif;
 	letter-spacing: -0.025rem;
@@ -343,6 +343,29 @@ h1 .li, h2 .li, h3 .li, p .li {
 	font-size: 1em;
 	line-height: 1.875;
 	font-weight: 300;
+}
+
+#text03 br + br {
+	margin-top: 1.125rem;
+}
+
+#text03 {
+	text-align: center;
+	color: #545454;
+	font-family: 'Heebo', sans-serif;
+	letter-spacing: -0.025rem;
+	width: 100%;
+	font-size: 1em;
+	line-height: 1.875;
+	font-weight: 300;
+}
+
+#text03 a {
+	text-decoration: underline;
+}
+
+#text03 a:hover {
+	text-decoration: none;
 }
 
 #text02 br + br {
@@ -426,12 +449,12 @@ h1 .li, h2 .li, h3 .li, p .li {
 
 #icons01 {
 	font-size: 1.75em;
-	width: calc(100% + 1.25rem);
-	margin-left: -0.625rem;
+	width: calc(100% + 0rem);
+	margin-left: -0rem;
 }
 
 #icons01 li {
-	margin: 0.625rem;
+	margin: 0rem;
 }
 
 #icons01 li a {
@@ -459,6 +482,41 @@ h1 .li, h2 .li, h3 .li, p .li {
 
 #icons01 a:hover svg {
 	fill: rgba(144,146,99,0.565) !important;
+}
+
+hr {
+	width: 100%;
+	position: relative;
+	padding: 0;
+	border: 0;
+}
+
+hr:before {
+	content: '';
+	display: inline-block;
+	vertical-align: middle;
+}
+
+#divider01 {
+	height: 0.5rem;
+	line-height: 0.5rem;
+}
+
+#divider01:before {
+	width: 100%;
+	border-top: solid 1px #222A51;
+	height: 1px;
+}
+
+#divider02 {
+	height: 0.5rem;
+	line-height: 0.5rem;
+}
+
+#divider02:before {
+	width: 100%;
+	border-top: solid 1px #222A51;
+	height: 1px;
 }
 
 .gallery .inner {
@@ -1168,7 +1226,14 @@ h1 .li, h2 .li, h3 .li, p .li {
 		width: 15rem;
 	}
 	
-	#text01 {
+	#text04 {
+		letter-spacing: -0.021875rem;
+		width: 100%;
+		font-size: 1em;
+		line-height: 1.875;
+	}
+	
+	#text03 {
 		letter-spacing: -0.021875rem;
 		width: 100%;
 		font-size: 1em;
@@ -1184,12 +1249,22 @@ h1 .li, h2 .li, h3 .li, p .li {
 	
 	#icons01 {
 		font-size: 1.75em;
-		width: calc(100% + 1.25rem);
-		margin-left: -0.625rem;
+		width: calc(100% + 0rem);
+		margin-left: -0rem;
 	}
 	
 	#icons01 li {
-		margin: 0.625rem;
+		margin: 0rem;
+	}
+	
+	#divider01 {
+		height: 0.5rem;
+		line-height: 0.5rem;
+	}
+	
+	#divider02 {
+		height: 0.5rem;
+		line-height: 0.5rem;
 	}
 	
 	.gallery-modal .close {
@@ -1341,7 +1416,11 @@ h1 .li, h2 .li, h3 .li, p .li {
 		margin-left: -50vw;
 	}
 	
-	#text01 {
+	#text04 {
+		font-size: 1em;
+	}
+	
+	#text03 {
 		font-size: 1em;
 	}
 	
@@ -1350,12 +1429,12 @@ h1 .li, h2 .li, h3 .li, p .li {
 	}
 	
 	#icons01 {
-		width: calc(100% + 0.9375rem);
-		margin-left: -0.46875rem;
+		width: calc(100% + 0rem);
+		margin-left: -0rem;
 	}
 	
 	#icons01 li {
-		margin: 0.46875rem;
+		margin: 0rem;
 	}
 	
 	#gallery01 ul {
