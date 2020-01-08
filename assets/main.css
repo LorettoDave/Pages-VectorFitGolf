@@ -497,26 +497,34 @@ hr:before {
 	vertical-align: middle;
 }
 
-#divider01 {
-	height: 0.5rem;
-	line-height: 0.5rem;
+#divider01:not(:first-child) {
+	margin-top: 0.25rem !important;
+}
+
+#divider01:not(:last-child) {
+	margin-bottom: 0.25rem !important;
 }
 
 #divider01:before {
 	width: 100%;
 	border-top: solid 1px #222A51;
 	height: 1px;
+	margin-top: -0.5px;
 }
 
-#divider02 {
-	height: 0.5rem;
-	line-height: 0.5rem;
+#divider02:not(:first-child) {
+	margin-top: 0.25rem !important;
+}
+
+#divider02:not(:last-child) {
+	margin-bottom: 0.25rem !important;
 }
 
 #divider02:before {
 	width: 100%;
 	border-top: solid 1px #222A51;
 	height: 1px;
+	margin-top: -0.5px;
 }
 
 .gallery .inner {
@@ -1257,14 +1265,28 @@ hr:before {
 		margin: 0rem;
 	}
 	
-	#divider01 {
-		height: 0.5rem;
-		line-height: 0.5rem;
+	#divider01:not(:first-child) {
+		margin-top: 0.25rem !important;
 	}
 	
-	#divider02 {
-		height: 0.5rem;
-		line-height: 0.5rem;
+	#divider01:not(:last-child) {
+		margin-bottom: 0.25rem !important;
+	}
+	
+	#divider01:before {
+		width: 100%;
+	}
+	
+	#divider02:not(:first-child) {
+		margin-top: 0.25rem !important;
+	}
+	
+	#divider02:not(:last-child) {
+		margin-bottom: 0.25rem !important;
+	}
+	
+	#divider02:before {
+		width: 100%;
 	}
 	
 	.gallery-modal .close {

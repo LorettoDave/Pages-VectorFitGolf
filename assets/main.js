@@ -124,6 +124,38 @@
 	
 			return a;
 	
+		},
+		thisHash = function() {
+	
+			var h = location.hash ? location.hash.substring(1) : null,
+				a;
+	
+			// Null? Bail.
+				if (!h)
+					return null;
+	
+			// Query string? Move before hash.
+				if (h.match(/\?/)) {
+	
+					// Split from hash.
+						a = h.split('?');
+						h = a[0];
+	
+					// Update hash.
+						history.replaceState(undefined, undefined, '#' + h);
+	
+					// Update search.
+						window.location.search = a[1];
+	
+				}
+	
+			// Prefix with "x" if not a letter.
+				if (h.length > 0
+				&&	!h.match(/^[a-zA-Z]/))
+					h = 'x' + h;
+	
+			return h;
+	
 		};
 	
 	// Animation.
