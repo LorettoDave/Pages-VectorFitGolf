@@ -14,6 +14,7 @@
 					browserVersion: 0,
 					os: 'other',
 					osVersion: 0,
+					mobile: false,
 					canUse: null
 				},
 				ua = navigator.userAgent,
@@ -25,6 +26,7 @@
 					['edge',		/Edge\/([0-9\.]+)/],
 					['safari',		/Version\/([0-9\.]+).+Safari/],
 					['chrome',		/Chrome\/([0-9\.]+)/],
+					['chrome',		/CriOS\/([0-9\.]+)/],
 					['ie',			/Trident\/.+rv:([0-9]+)/]
 				];
 	
@@ -81,6 +83,9 @@
 	
 					))
 						o.os = 'ios';
+	
+			// mobile.
+				o.mobile = (o.os == 'android' || o.os == 'ios');
 	
 			// canUse.
 				var _canUse = document.createElement('div');
@@ -172,11 +177,240 @@
 				&&	!h.match(/^[a-zA-Z]/))
 					h = 'x' + h;
 	
+			// Convert to lowercase.
+				if (typeof h == 'string')
+					h = h.toLowerCase();
+	
 			return h;
+	
+		},
+		scrollToElement = function(e, style, duration) {
+	
+			var y, cy, dy,
+				start, easing, offset, f;
+	
+			// Element.
+	
+				// No element? Assume top of page.
+					if (!e)
+						y = 0;
+	
+				// Otherwise ...
+					else {
+	
+						offset = (e.dataset.scrollOffset ? parseInt(e.dataset.scrollOffset) : 0) * parseFloat(getComputedStyle(document.documentElement).fontSize);
+	
+						switch (e.dataset.scrollBehavior ? e.dataset.scrollBehavior : 'default') {
+	
+							case 'default':
+							default:
+	
+								y = e.offsetTop + offset;
+	
+								break;
+	
+							case 'center':
+	
+								if (e.offsetHeight < window.innerHeight)
+									y = e.offsetTop - ((window.innerHeight - e.offsetHeight) / 2) + offset;
+								else
+									y = e.offsetTop - offset;
+	
+								break;
+	
+							case 'previous':
+	
+								if (e.previousElementSibling)
+									y = e.previousElementSibling.offsetTop + e.previousElementSibling.offsetHeight + offset;
+								else
+									y = e.offsetTop + offset;
+	
+								break;
+	
+						}
+	
+					}
+	
+			// Style.
+				if (!style)
+					style = 'smooth';
+	
+			// Duration.
+				if (!duration)
+					duration = 750;
+	
+			// Instant? Just scroll.
+				if (style == 'instant') {
+	
+					window.scrollTo(0, y);
+					return;
+	
+				}
+	
+			// Get start, current Y.
+				start = Date.now();
+				cy = window.scrollY;
+				dy = y - cy;
+	
+			// Set easing.
+				switch (style) {
+	
+					case 'linear':
+						easing = function (t) { return t };
+						break;
+	
+					case 'smooth':
+						easing = function (t) { return t<.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1 };
+						break;
+	
+				}
+	
+			// Scroll.
+				f = function() {
+	
+					var t = Date.now() - start;
+	
+					// Hit duration? Scroll to y and finish.
+						if (t >= duration)
+							window.scroll(0, y);
+	
+					// Otherwise ...
+						else {
+	
+							// Scroll.
+								window.scroll(0, cy + (dy * easing(t / duration)));
+	
+							// Repeat.
+								requestAnimationFrame(f);
+	
+						}
+	
+				};
+	
+				f();
+	
+		},
+		scrollToTop = function() {
+	
+			// Scroll to top.
+				scrollToElement(null);
+	
+		},
+		loadElements = function(parent) {
+	
+			var a, e, x, i;
+	
+			// IFRAMEs.
+	
+				// Get list of unloaded IFRAMEs.
+					a = parent.querySelectorAll('iframe[data-src]:not([data-src=""])');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Load.
+							a[i].src = a[i].dataset.src;
+	
+						// Mark as loaded.
+							a[i].dataset.src = "";
+	
+					}
+	
+			// Video.
+	
+				// Get list of videos (autoplay).
+					a = parent.querySelectorAll('video[autoplay]');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Play if paused.
+							if (a[i].paused)
+								a[i].play();
+	
+					}
+	
+			// Autofocus.
+	
+				// Get first element with data-autofocus attribute.
+					e = parent.querySelector('[data-autofocus="1"]');
+	
+				// Determine type.
+					x = e ? e.tagName : null;
+	
+					switch (x) {
+	
+						case 'FORM':
+	
+							// Get first input.
+								e = e.querySelector('.field input, .field select, .field textarea');
+	
+							// Found? Focus.
+								if (e)
+									e.focus();
+	
+							break;
+	
+						default:
+							break;
+	
+					}
+	
+		},
+		unloadElements = function(parent) {
+	
+			var a, e, x, i;
+	
+			// IFRAMEs.
+	
+				// Get list of loaded IFRAMEs.
+					a = parent.querySelectorAll('iframe[data-src=""]');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Don't unload? Skip.
+							if (a[i].dataset.srcUnload === '0')
+								continue;
+	
+						// Mark as unloaded.
+							a[i].dataset.src = a[i].src;
+	
+						// Unload.
+							a[i].src = '';
+	
+					}
+	
+			// Video.
+	
+				// Get list of videos.
+					a = parent.querySelectorAll('video');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Pause if playing.
+							if (!a[i].paused)
+								a[i].pause();
+	
+					}
+	
+			// Autofocus.
+	
+				// Get focused element.
+					e = $(':focus');
+	
+				// Found? Blur.
+					if (e)
+						e.blur();
+	
 	
 		};
 	
-	// Animation.
+		// Expose scrollToElement.
+			window._scrollToTop = scrollToTop;
+	
+	// "On Load" animation.
 		on('load', function() {
 			setTimeout(function() {
 				$body.className = $body.className.replace(/\bis-loading\b/, 'is-playing');
@@ -186,6 +420,9 @@
 				}, 1000);
 			}, 100);
 		});
+	
+	// Load elements (if needed).
+		loadElements(document.body);
 	
 	// Browser hacks.
 	
@@ -199,6 +436,34 @@
 	
 			// Get sheet.
 				sheet = style.sheet;
+	
+		// Mobile.
+			if (client.mobile) {
+	
+				// Prevent overscrolling on Safari/other mobile browsers.
+				// 'vh' units don't factor in the heights of various browser UI elements so our page ends up being
+				// a lot taller than it needs to be (resulting in overscroll and issues with vertical centering).
+					(function() {
+	
+						var f = function() {
+							document.documentElement.style.setProperty('--viewport-height', window.innerHeight + 'px');
+							document.documentElement.style.setProperty('--background-height', (window.innerHeight + 250) + 'px');
+						};
+	
+						on('load', f);
+						on('resize', f);
+						on('orientationchange', function() {
+	
+							// Update after brief delay.
+								setTimeout(function() {
+									(f)();
+								}, 100);
+	
+						});
+	
+					})();
+	
+			}
 	
 		// Android.
 			if (client.os == 'android') {
@@ -566,15 +831,244 @@
 	
 			}
 	
+	// Scroll events.
+		var scrollEvents = {
+	
+			/**
+			 * Items.
+			 * @var {array}
+			 */
+			items: [],
+	
+			/**
+			 * Adds an event.
+			 * @param {object} o Options.
+			 */
+			add: function(o) {
+	
+				this.items.push({
+					element: o.element,
+					enter: ('enter' in o ? o.enter : null),
+					leave: ('leave' in o ? o.leave : null),
+					mode: ('mode' in o ? o.mode : 1),
+					offset: ('offset' in o ? o.offset : 0),
+					state: false,
+				});
+	
+			},
+	
+			/**
+			 * Handler.
+			 */
+			handler: function() {
+	
+				var	height, top, bottom, scrollPad;
+	
+				// Determine values.
+					if (client.os == 'ios') {
+	
+						height = document.documentElement.clientHeight;
+						top = document.body.scrollTop + window.scrollY;
+						bottom = top + height;
+						scrollPad = 125;
+	
+					}
+					else {
+	
+						height = document.documentElement.clientHeight;
+						top = document.documentElement.scrollTop;
+						bottom = top + height;
+						scrollPad = 0;
+	
+					}
+	
+				// Step through items.
+					scrollEvents.items.forEach(function(item) {
+	
+						var bcr, elementTop, elementBottom, state, a, b;
+	
+						// No enter/leave handlers? Bail.
+							if (!item.enter
+							&&	!item.leave)
+								return true;
+	
+						// Not visible? Bail.
+							if (item.element.offsetParent === null)
+								return true;
+	
+						// Get element position.
+							bcr = item.element.getBoundingClientRect();
+							elementTop = top + Math.floor(bcr.top);
+							elementBottom = elementTop + bcr.height;
+	
+						// Determine state.
+							switch (item.mode) {
+	
+								// Element falls within viewport.
+									case 1:
+									default:
+	
+										// State.
+											state = (bottom > (elementTop - item.offset) && top < (elementBottom + item.offset));
+	
+										break;
+	
+								// Viewport midpoint falls within element.
+									case 2:
+	
+										// Midpoint.
+											a = (top + (height * 0.5));
+	
+										// State.
+											state = (a > (elementTop - item.offset) && a < (elementBottom + item.offset));
+	
+										break;
+	
+								// Viewport midsection falls within element.
+									case 3:
+	
+										// Upper limit (25%-).
+											a = top + (height * 0.25);
+	
+											if (a - (height * 0.375) <= 0)
+												a = 0;
+	
+										// Lower limit (-75%).
+											b = top + (height * 0.75);
+	
+											if (b + (height * 0.375) >= document.body.scrollHeight - scrollPad)
+												b = document.body.scrollHeight + scrollPad;
+	
+										// State.
+											state = (b > (elementTop - item.offset) && a < (elementBottom + item.offset));
+	
+										break;
+	
+							}
+	
+						// State changed?
+							if (state != item.state) {
+	
+								// Update state.
+									item.state = state;
+	
+								// Call handler.
+									if (item.state) {
+	
+										// Enter handler exists?
+											if (item.enter) {
+	
+												// Call it.
+													(item.enter).apply(item.element);
+	
+												// No leave handler? Unbind enter handler (so we don't check this element again).
+													if (!item.leave)
+														item.enter = null;
+	
+											}
+	
+									}
+									else {
+	
+										// Leave handler exists?
+											if (item.leave) {
+	
+												// Call it.
+													(item.leave).apply(item.element);
+	
+												// No enter handler? Unbind leave handler (so we don't check this element again).
+													if (!item.enter)
+														item.leave = null;
+	
+											}
+	
+									}
+	
+							}
+	
+					});
+	
+			},
+	
+			/**
+			 * Initializes scroll events.
+			 */
+			init: function() {
+	
+				// Bind handler to events.
+					on('load', this.handler);
+					on('resize', this.handler);
+					on('scroll', this.handler);
+	
+				// Do initial handler call.
+					(this.handler)();
+	
+			}
+		};
+	
+		// Initialize.
+			scrollEvents.init();
+	
 	// Deferred.
 		(function() {
 	
 			var items = $$('.deferred'),
-				f;
+				loadHandler, enterHandler;
 	
 			// Polyfill: NodeList.forEach()
 				if (!('forEach' in NodeList.prototype))
 					NodeList.prototype.forEach = Array.prototype.forEach;
+	
+			// Handlers.
+				loadHandler = function() {
+	
+					var i = this,
+						p = this.parentElement;
+	
+					// Not "done" yet? Bail.
+						if (i.dataset.src !== 'done')
+							return;
+	
+					// Show image.
+						if (Date.now() - i._startLoad < 375) {
+	
+							p.classList.remove('loading');
+							p.style.backgroundImage = 'none';
+							i.style.transition = '';
+							i.style.opacity = 1;
+	
+						}
+						else {
+	
+							p.classList.remove('loading');
+							i.style.opacity = 1;
+	
+							setTimeout(function() {
+								i.style.backgroundImage = 'none';
+							}, 375);
+	
+						}
+	
+				};
+	
+				enterHandler = function() {
+	
+					var	i = this,
+						p = this.parentElement,
+						src;
+	
+					// Get src, mark as "done".
+						src = i.dataset.src;
+						i.dataset.src = 'done';
+	
+					// Mark parent as loading.
+						p.classList.add('loading');
+	
+					// Swap placeholder for real image src.
+						i._startLoad = Date.now();
+						i.src = src;
+	
+				};
 	
 			// Initialize items.
 				items.forEach(function(p) {
@@ -592,86 +1086,16 @@
 						i.style.transition = 'opacity 0.375s ease-in-out';
 	
 					// Load event.
-						i.addEventListener('load', function(event) {
+						i.addEventListener('load', loadHandler);
 	
-							// Not "done" yet? Bail.
-								if (i.dataset.src !== 'done')
-									return;
-	
-							// Show image.
-								if (Date.now() - i._startLoad < 375) {
-	
-									p.classList.remove('loading');
-									p.style.backgroundImage = 'none';
-									i.style.transition = '';
-									i.style.opacity = 1;
-	
-								}
-								else {
-	
-									p.classList.remove('loading');
-									i.style.opacity = 1;
-	
-									setTimeout(function() {
-										p.style.backgroundImage = 'none';
-									}, 375);
-	
-								}
-	
+					// Add to scroll events.
+						scrollEvents.add({
+							element: i,
+							enter: enterHandler,
+							offset: 250
 						});
 	
 				});
-	
-			// Handler function.
-				f = function() {
-	
-					var	height = document.documentElement.clientHeight,
-						top = (client.os == 'ios' ? document.body.scrollTop : document.documentElement.scrollTop),
-						bottom = top + height;
-	
-					// Step through items.
-						items.forEach(function(p) {
-	
-							var i = p.firstElementChild;
-	
-							// Not visible? Bail.
-								if (i.offsetParent === null)
-									return true;
-	
-							// "Done" already? Bail.
-								if (i.dataset.src === 'done')
-									return true;
-	
-							// Get image position.
-								var	x = i.getBoundingClientRect(),
-									imageTop = top + Math.floor(x.top) - height,
-									imageBottom = top + Math.ceil(x.bottom) + height,
-									src;
-	
-							// Falls within viewable area of viewport?
-								if (imageTop <= bottom && imageBottom >= top) {
-	
-									// Get src, mark as "done".
-										src = i.dataset.src;
-										i.dataset.src = 'done';
-	
-									// Mark parent as loading.
-										p.classList.add('loading');
-	
-									// Swap placeholder for real image src.
-										i._startLoad = Date.now();
-										i.src = src;
-	
-								}
-	
-						});
-	
-				};
-	
-			// Add event listeners.
-				on('load', f);
-				on('resize', f);
-				on('scroll', f);
 	
 		})();
 	
@@ -749,6 +1173,12 @@
 			 */
 			this.navigation = null;
 		
+			/**
+			 * Mobile state.
+			 * @var {bool}
+			 */
+			this.mobile = null;
+		
 			// Init modal.
 				this.initModal();
 		
@@ -763,6 +1193,7 @@
 				var _this = this,
 					$links = $$('#' + config.id + ' .thumbnail'),
 					navigation = (config.navigation && $links.length > 1),
+					mobile = config.mobile,
 					i;
 		
 				// Initialize links.
@@ -770,13 +1201,20 @@
 						(function(index) {
 							$links[index].addEventListener('click', function(event) {
 		
-								event.stopPropagation();
-								event.preventDefault();
+								// Ignored? Skip.
+									if (this.dataset.lightboxIgnore == '1')
+										return;
 		
-								_this.show(index, {
-									$links: $links,
-									navigation: navigation
-								});
+								// Prevent default.
+									event.stopPropagation();
+									event.preventDefault();
+		
+								// Show.
+									_this.show(index, {
+										$links: $links,
+										navigation: navigation,
+										mobile: mobile
+									});
 		
 							});
 						})(i);
@@ -971,10 +1409,13 @@
 					};
 		
 				// Events.
+					$modal.addEventListener('touchmove', function(event) {
+						event.preventDefault();
+					});
+		
 					$modal.addEventListener('click', function(event) {
 						$modal.hide();
 					});
-		
 		
 					$modal.addEventListener('keydown', function(event) {
 		
@@ -1076,6 +1517,7 @@
 				// Update config.
 					this.$links = config.$links;
 					this.navigation = config.navigation;
+					this.mobile = config.mobile;
 		
 					if (this.navigation) {
 		
@@ -1090,6 +1532,10 @@
 		
 					}
 		
+				// Mobile and not permitted? Bail.
+					if (client.mobile && !this.mobile)
+						return;
+		
 				// Show modal.
 					this.$modal.show(href);
 		
@@ -1100,7 +1546,8 @@
 	// Gallery: gallery01.
 		_lightboxGallery.init({
 			id: 'gallery01',
-			navigation: true
+			navigation: true,
+			mobile: true
 		});
 
 })();
