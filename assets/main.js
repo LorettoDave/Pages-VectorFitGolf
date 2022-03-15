@@ -848,10 +848,12 @@
 	
 				this.items.push({
 					element: o.element,
+					triggerElement: (('triggerElement' in o && o.triggerElement) ? o.triggerElement : o.element),
 					enter: ('enter' in o ? o.enter : null),
 					leave: ('leave' in o ? o.leave : null),
 					mode: ('mode' in o ? o.mode : 1),
 					offset: ('offset' in o ? o.offset : 0),
+					initialState: ('initialState' in o ? o.initialState : null),
 					state: false,
 				});
 	
@@ -893,58 +895,75 @@
 								return true;
 	
 						// Not visible? Bail.
-							if (item.element.offsetParent === null)
+							if (item.triggerElement.offsetParent === null)
 								return true;
 	
 						// Get element position.
-							bcr = item.element.getBoundingClientRect();
+							bcr = item.triggerElement.getBoundingClientRect();
 							elementTop = top + Math.floor(bcr.top);
 							elementBottom = elementTop + bcr.height;
 	
 						// Determine state.
-							switch (item.mode) {
 	
-								// Element falls within viewport.
-									case 1:
-									default:
+							// Initial state exists?
+								if (item.initialState !== null) {
 	
-										// State.
-											state = (bottom > (elementTop - item.offset) && top < (elementBottom + item.offset));
+									// Use it for this check.
+										state = item.initialState;
 	
-										break;
+									// Clear it.
+										item.initialState = null;
 	
-								// Viewport midpoint falls within element.
-									case 2:
+								}
 	
-										// Midpoint.
-											a = (top + (height * 0.5));
+							// Otherwise, determine state from mode/position.
+								else {
 	
-										// State.
-											state = (a > (elementTop - item.offset) && a < (elementBottom + item.offset));
+									switch (item.mode) {
 	
-										break;
+										// Element falls within viewport.
+											case 1:
+											default:
 	
-								// Viewport midsection falls within element.
-									case 3:
+												// State.
+													state = (bottom > (elementTop - item.offset) && top < (elementBottom + item.offset));
 	
-										// Upper limit (25%-).
-											a = top + (height * 0.25);
+												break;
 	
-											if (a - (height * 0.375) <= 0)
-												a = 0;
+										// Viewport midpoint falls within element.
+											case 2:
 	
-										// Lower limit (-75%).
-											b = top + (height * 0.75);
+												// Midpoint.
+													a = (top + (height * 0.5));
 	
-											if (b + (height * 0.375) >= document.body.scrollHeight - scrollPad)
-												b = document.body.scrollHeight + scrollPad;
+												// State.
+													state = (a > (elementTop - item.offset) && a < (elementBottom + item.offset));
 	
-										// State.
-											state = (b > (elementTop - item.offset) && a < (elementBottom + item.offset));
+												break;
 	
-										break;
+										// Viewport midsection falls within element.
+											case 3:
 	
-							}
+												// Upper limit (25%-).
+													a = top + (height * 0.25);
+	
+													if (a - (height * 0.375) <= 0)
+														a = 0;
+	
+												// Lower limit (-75%).
+													b = top + (height * 0.75);
+	
+													if (b + (height * 0.375) >= document.body.scrollHeight - scrollPad)
+														b = document.body.scrollHeight + scrollPad;
+	
+												// State.
+													state = (b > (elementTop - item.offset) && a < (elementBottom + item.offset));
+	
+												break;
+	
+									}
+	
+								}
 	
 						// State changed?
 							if (state != item.state) {
@@ -1020,6 +1039,10 @@
 					NodeList.prototype.forEach = Array.prototype.forEach;
 	
 			// Handlers.
+	
+				/**
+				 * "On Load" handler.
+				 */
 				loadHandler = function() {
 	
 					var i = this,
@@ -1045,12 +1068,16 @@
 	
 							setTimeout(function() {
 								i.style.backgroundImage = 'none';
+								i.style.transition = '';
 							}, 375);
 	
 						}
 	
 				};
 	
+				/**
+				 * "On Enter" handler.
+				 */
 				enterHandler = function() {
 	
 					var	i = this,
@@ -1076,10 +1103,14 @@
 					var i = p.firstElementChild;
 	
 					// Set parent to placeholder.
-						p.style.backgroundImage = 'url(' + i.src + ')';
-						p.style.backgroundSize = '100% 100%';
-						p.style.backgroundPosition = 'top left';
-						p.style.backgroundRepeat = 'no-repeat';
+						if (!p.classList.contains('enclosed')) {
+	
+							p.style.backgroundImage = 'url(' + i.src + ')';
+							p.style.backgroundSize = '100% 100%';
+							p.style.backgroundPosition = 'top left';
+							p.style.backgroundRepeat = 'no-repeat';
+	
+						}
 	
 					// Hide image.
 						i.style.opacity = 0;
@@ -1192,32 +1223,52 @@
 		
 				var _this = this,
 					$links = $$('#' + config.id + ' .thumbnail'),
-					navigation = (config.navigation && $links.length > 1),
+					navigation = config.navigation,
 					mobile = config.mobile,
-					i;
+					i, j;
 		
-				// Initialize links.
-					for (i=0; i < $links.length; i++)
-						(function(index) {
-							$links[index].addEventListener('click', function(event) {
+				// Determine if navigation needs to be disabled (despite what our config says).
+					j = 0;
 		
-								// Ignored? Skip.
-									if (this.dataset.lightboxIgnore == '1')
-										return;
+					// Step through items.
+						for (i = 0; i < $links.length; i++) {
 		
-								// Prevent default.
-									event.stopPropagation();
-									event.preventDefault();
+							// Not ignored? Increment count.
+								if ($links[i].dataset.lightboxIgnore != '1')
+									j++;
 		
-								// Show.
-									_this.show(index, {
-										$links: $links,
-										navigation: navigation,
-										mobile: mobile
-									});
+						}
 		
-							});
-						})(i);
+					// Less than two allowed items? Disable navigation.
+						if (j < 2)
+							navigation = false;
+		
+				// Bind click events.
+					for (i=0; i < $links.length; i++) {
+		
+						// Ignored? Skip.
+							if ($links[i].dataset.lightboxIgnore == '1')
+								continue;
+		
+						// Bind click event.
+							(function(index) {
+								$links[index].addEventListener('click', function(event) {
+		
+									// Prevent default.
+										event.stopPropagation();
+										event.preventDefault();
+		
+									// Show.
+										_this.show(index, {
+											$links: $links,
+											navigation: navigation,
+											mobile: mobile
+										});
+		
+								});
+							})(i);
+		
+					}
 		
 			};
 		
@@ -1268,33 +1319,93 @@
 						$modalPrevious = $('#' + this.id + '-modal .previous');
 		
 				// Methods.
-					$modal.show = function(index) {
+					$modal.show = function(index, offset) {
 		
-						var item;
+						var item,
+							i, j, found;
 		
 						// Locked? Bail.
 							if (_this.locked)
 								return;
 		
-						// Check index.
+						// No index provided? Use current.
+							if (typeof index != 'number')
+								index = _this.current;
 		
-							// Less than zero? Jump to end.
-								if (index < 0)
-									index = _this.$links.length - 1;
+						// Offset provided? Find first allowed offset item.
+							if (typeof offset == 'number') {
 		
-							// Greater than length? Jump to beginning.
-								else if (index >= _this.$links.length)
-									index = 0;
+								found = false;
+								j = 0;
 		
-							// Already there? Bail.
-								if (index == _this.current)
-									return;
+								// Step through items using offset (up to item count).
+									for (j = 0; j < _this.$links.length; j++) {
 		
-						// Get item.
-							item = _this.$links.item(index);
+										// Increment index by offset.
+											index += offset;
 		
-							if (!item)
-								return;
+										// Less than zero? Jump to end.
+											if (index < 0)
+												index = _this.$links.length - 1;
+		
+										// Greater than length? Jump to beginning.
+											else if (index >= _this.$links.length)
+												index = 0;
+		
+										// Already there? Bail.
+											if (index == _this.current)
+												break;
+		
+										// Get item.
+											item = _this.$links.item(index);
+		
+											if (!item)
+												break;
+		
+										// Not ignored? Found!
+											if (item.dataset.lightboxIgnore != '1') {
+		
+												found = true;
+												break;
+		
+											}
+		
+									}
+		
+								// Couldn't find an allowed item? Bail.
+									if (!found)
+										return;
+		
+							}
+		
+						// Otherwise, see if requested item is allowed.
+							else {
+		
+								// Check index.
+		
+									// Less than zero? Jump to end.
+										if (index < 0)
+											index = _this.$links.length - 1;
+		
+									// Greater than length? Jump to beginning.
+										else if (index >= _this.$links.length)
+											index = 0;
+		
+									// Already there? Bail.
+										if (index == _this.current)
+											return;
+		
+								// Get item.
+									item = _this.$links.item(index);
+		
+									if (!item)
+										return;
+		
+								// Ignored? Bail.
+									if (item.dataset.lightboxIgnore == '1')
+										return;
+		
+							}
 		
 						// Lock.
 							_this.locked = true;
@@ -1393,11 +1504,11 @@
 					};
 		
 					$modal.next = function() {
-						$modal.show(_this.current + 1);
+						$modal.show(null, 1);
 					};
 		
 					$modal.previous = function() {
-						$modal.show(_this.current - 1);
+						$modal.show(null, -1);
 					};
 		
 					$modal.first = function() {
